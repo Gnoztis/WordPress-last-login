@@ -2,10 +2,15 @@
 /**
  * Plugin Name: WordPress Last Login
  * Description: Displays the date of the last login and IP in user lists (admins only).
- * Version:     1.2.1
+ * Version:     1.3.0
  * Author:      Gnostis
+ * License:     GPL-2.0-or-later
  * Text Domain: wp-last-login
  * Domain Path: /lang
+ * Requires at least: 7.0
+ * Tested up to: 7.1
+ * Requires PHP: 8.0
+ * Update URI:  https://github.com/Gnoztis/WordPress-last-login
  *
  * @package WordPress-last-login
  */
@@ -13,6 +18,12 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+define( 'WPLL_VERSION', '1.3.0' );
+define( 'WPLL_PLUGIN_FILE', __FILE__ );
+define( 'WPLL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+
+require_once WPLL_PLUGIN_DIR . 'includes/class-wpll-github-updater.php';
 
 final class WPLL_Last_Login {
 
@@ -46,8 +57,9 @@ final class WPLL_Last_Login {
 		add_action( 'wp_login', array( __CLASS__, 'on_login' ), 10, 2 );
 		add_action( 'two_factor_user_authenticated', array( __CLASS__, 'on_login_2fa' ) );
 
-		// Local-only plugin: prevent update checks from remote repo.
-		add_filter( 'pre_set_site_transient_update_plugins', array( __CLASS__, 'disable_updates' ) );
+		// Plugin updates through the native WordPress mechanism (GitHub).
+		$updater = new WPLL_GitHub_Updater();
+		$updater->register_hooks();
 	}
 
 	/**
@@ -91,8 +103,8 @@ final class WPLL_Last_Login {
 
 		add_filter( 'manage_users_custom_column', array( __CLASS__, 'render_column' ), 10, 3 );
 
-		add_filter( 'admin_print_styles-users.php', array( __CLASS__, 'column_style' ) );
-		add_filter( 'admin_print_styles-site-users.php', array( __CLASS__, 'column_style' ) );
+		add_action( 'admin_print_styles-users.php', array( __CLASS__, 'column_style' ) );
+		add_action( 'admin_print_styles-site-users.php', array( __CLASS__, 'column_style' ) );
 
 		add_filter( 'manage_users_sortable_columns', array( __CLASS__, 'add_sortable' ) );
 		add_filter( 'manage_users-network_sortable_columns', array( __CLASS__, 'add_sortable' ) );
@@ -101,11 +113,14 @@ final class WPLL_Last_Login {
 
 	/**
 	 * Activation: seed default meta for all existing users.
+	 *
+	 * Only missing keys are written: reactivating the plugin (or updating it)
+	 * must not erase the recorded history, which is the whole point of the
+	 * stored data.
 	 */
 	public static function activate() {
 		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
-			update_user_meta( $user_id, self::META_LAST_LOGIN, 0 );
-			update_user_meta( $user_id, self::META_LAST_IP, 0 );
+			self::seed_missing_meta( $user_id );
 		}
 	}
 
@@ -126,8 +141,26 @@ final class WPLL_Last_Login {
 	 * @param int $user_id New user ID.
 	 */
 	public static function on_user_register( $user_id ) {
-		update_user_meta( $user_id, self::META_LAST_LOGIN, 0 );
-		update_user_meta( $user_id, self::META_LAST_IP, 0 );
+		self::seed_missing_meta( $user_id );
+	}
+
+	/**
+	 * Writes the default value for every meta key of a user that lacks it.
+	 *
+	 * The columns read the keys and the users list is sortable by the login
+	 * time, so every user should carry both keys; an existing value is never
+	 * touched.
+	 *
+	 * @param int $user_id User ID.
+	 */
+	private static function seed_missing_meta( $user_id ) {
+		$user_id = (int) $user_id;
+
+		foreach ( array( self::META_LAST_LOGIN, self::META_LAST_IP ) as $key ) {
+			if ( ! metadata_exists( 'user', $user_id, $key ) ) {
+				update_user_meta( $user_id, $key, 0 );
+			}
+		}
 	}
 
 	/**
@@ -169,56 +202,101 @@ final class WPLL_Last_Login {
 	}
 
 	/**
-	 * Resolve the real client IP behind a trusted nginx reverse proxy.
+	 * Resolve the real client IP of the current request.
 	 *
-	 * Priority:
-	 *   1. X-Real-IP        — set by nginx to the direct client address.
+	 * A forwarding header is only trusted when the request came from a
+	 * trusted proxy. Otherwise every visitor could choose the address that
+	 * gets recorded, simply by sending X-Real-IP or X-Forwarded-For: the
+	 * column is an audit trail, so a forged value is worse than a proxy
+	 * address.
+	 *
+	 * A proxy is trusted when its address is not routable from the internet
+	 * (loopback, private or reserved — a normal reverse proxy on the same
+	 * host or in the same network) or when it is listed in the
+	 * `wpll_trusted_proxies` filter. A request that arrives straight from a
+	 * public address is recorded by that address; its headers are ignored.
+	 *
+	 * Priority for a trusted proxy:
+	 *   1. X-Real-IP        — set by nginx to the address of its peer.
 	 *   2. X-Forwarded-For  — last entry is the address appended by our nginx
-	 *                         (when using $proxy_add_x_forwarded_for).
-	 *   3. REMOTE_ADDR      — fallback (would be nginx itself).
+	 *                         (with $proxy_add_x_forwarded_for).
+	 *   3. REMOTE_ADDR      — fallback (the proxy itself).
 	 *
-	 * @return string|null
+	 * @return string|null Valid IP address, null when none is known.
 	 */
 	private static function get_client_ip() {
-		if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
-			$ip = trim( (string) $_SERVER['HTTP_X_REAL_IP'] );
-			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				return $ip;
+		$remote = self::server_value( 'REMOTE_ADDR' );
+		if ( '' === $remote || ! filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+			return null;
+		}
+
+		if ( ! self::is_trusted_proxy( $remote ) ) {
+			return $remote;
+		}
+
+		$real = self::server_value( 'HTTP_X_REAL_IP' );
+		if ( '' !== $real && filter_var( $real, FILTER_VALIDATE_IP ) ) {
+			return $real;
+		}
+
+		$forwarded = self::server_value( 'HTTP_X_FORWARDED_FOR' );
+		if ( '' !== $forwarded ) {
+			$parts = array_map( 'trim', explode( ',', $forwarded ) );
+			$last  = (string) end( $parts );
+			if ( filter_var( $last, FILTER_VALIDATE_IP ) ) {
+				return $last;
 			}
 		}
 
-		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-			$parts = array_map( 'trim', explode( ',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
-			$ip    = (string) end( $parts );
-			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				return $ip;
-			}
-		}
-
-		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
-			$ip = trim( (string) $_SERVER['REMOTE_ADDR'] );
-			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				return $ip;
-			}
-		}
-
-		return null;
+		return $remote;
 	}
 
 	/**
-	 * Do not offer plugin updates — this plugin is local-only.
+	 * Whether the request source is allowed to set forwarding headers.
 	 *
-	 * @param object $transient Update transient.
-	 * @return object
+	 * @param string $remote Validated REMOTE_ADDR of the request.
+	 * @return bool
 	 */
-	public static function disable_updates( $transient ) {
-		if ( is_object( $transient ) && isset( $transient->response ) ) {
-			$basename = plugin_basename( __FILE__ );
-			if ( isset( $transient->response[ $basename ] ) ) {
-				unset( $transient->response[ $basename ] );
-			}
+	private static function is_trusted_proxy( $remote ) {
+		/**
+		 * Filter the proxy addresses whose forwarding headers are trusted.
+		 *
+		 * @param string[] $proxies IP addresses of trusted proxies. Default: none.
+		 */
+		$proxies = array_filter(
+			array_map( 'strval', (array) apply_filters( 'wpll_trusted_proxies', array() ) )
+		);
+
+		if ( in_array( (string) $remote, $proxies, true ) ) {
+			return true;
 		}
-		return $transient;
+
+		// A public address cannot be a proxy of this site: a connection from
+		// the internet carries the address of the sender, so its forwarding
+		// headers are controlled by the sender.
+		return ! filter_var(
+			$remote,
+			FILTER_VALIDATE_IP,
+			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+		);
+	}
+
+	/**
+	 * Read a $_SERVER value as a trimmed string.
+	 *
+	 * @param string $key Server variable name.
+	 * @return string Empty string when the variable is missing.
+	 */
+	private static function server_value( $key ) {
+		$value = isset( $_SERVER[ $key ] ) ? wp_unslash( $_SERVER[ $key ] ) : '';
+
+		// A header is a string; anything else (an array injected into $_SERVER)
+		// is not a value this method may return.
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+
+		return trim( sanitize_text_field( $value ) );
 	}
 
 	/**
@@ -249,15 +327,21 @@ final class WPLL_Last_Login {
 	 * @return string
 	 */
 	public static function render_column( $value, $column_name, $user_id ) {
+		// Defence in depth: the columns are only registered for allowed users,
+		// but a third party can register the same column keys.
+		if ( 'wp-last-login' !== $column_name && 'wp-last-ip' !== $column_name ) {
+			return $value;
+		}
+
+		if ( ! self::current_user_can_see() ) {
+			return $value;
+		}
+
 		if ( 'wp-last-login' === $column_name ) {
 			return self::render_last_login( (int) $user_id );
 		}
 
-		if ( 'wp-last-ip' === $column_name ) {
-			return self::render_last_ip( (int) $user_id );
-		}
-
-		return $value;
+		return self::render_last_ip( (int) $user_id );
 	}
 
 	/**
@@ -271,7 +355,7 @@ final class WPLL_Last_Login {
 			return esc_html__( 'Never.', self::TEXTDOMAIN );
 		}
 
-		$format    = apply_filters( 'wpll_date_format', get_option( 'date_format' ) );
+		$format    = (string) apply_filters( 'wpll_date_format', get_option( 'date_format' ) );
 		$timestamp = (int) get_date_from_gmt( gmdate( 'Y-m-d H:i:s', $last_login ), 'U' );
 
 		return sprintf(
@@ -295,7 +379,7 @@ final class WPLL_Last_Login {
 			return esc_html__( 'Never.', self::TEXTDOMAIN );
 		}
 
-		$url = 'https://ipinfo.io/' . rawurlencode( $last_ip );
+		$url = 'https://ipinfo.io/' . rawurlencode( (string) $last_ip );
 
 		return sprintf(
 			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
@@ -318,6 +402,15 @@ final class WPLL_Last_Login {
 	/**
 	 * Handle ordering by Last Login.
 	 *
+	 * The requested column is matched against a literal: the value comes from
+	 * the request, so it must never reach the query as a key. The meta key
+	 * itself is a constant, never user input.
+	 *
+	 * Sorting by a meta key makes WP_User_Query join the meta table, so users
+	 * without the key would drop out of the list. The key is seeded for every
+	 * existing user on activation and for every new user on registration,
+	 * which keeps the list complete.
+	 *
 	 * @param WP_User_Query $user_query User query.
 	 * @return WP_User_Query
 	 */
@@ -336,16 +429,16 @@ final class WPLL_Last_Login {
 WPLL_Last_Login::init();
 
 /*
- * По умолчанию колонки "Last Login" и "Last IP" видны только администраторам
- * (пользователям с возможностью `manage_options`).
+ * By default the "Last Login" and "Last IP" columns are visible to
+ * administrators only (users with the `manage_options` capability).
  *
- * Чтобы изменить это поведение, добавьте фильтр:
+ * To change that, add a filter:
  *
- *     // Разрешить также редакторам:
+ *     // Allow editors as well:
  *     add_filter( 'wpll_current_user_can', function ( $can ) {
  *         return $can || current_user_can( 'edit_others_posts' );
  *     } );
  *
- *     // Полностью отключить для всех (в т.ч. для админов):
+ *     // Disable for everyone, administrators included:
  *     add_filter( 'wpll_current_user_can', '__return_false' );
  */
