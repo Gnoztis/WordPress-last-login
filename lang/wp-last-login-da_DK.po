@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Last Login\n"
+"Project-Id-Version: WordPress Last Login 1.3.1\n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: Thomas Clausen <kontakt@thomasclausen.dk>\n"
@@ -15,60 +15,16 @@ msgstr ""
 "X-Poedit-KeywordsList: __;_e\n"
 
 # @ wp-last-login
-#: obenland-wp-plugins.php:123
-msgid "Donate"
-msgstr "Donér"
-
-# @ wp-last-login
-#. translators: plugin header field 'Name'
-#: wp-last-login.php:0
-msgid "WP Last Login"
-msgstr "WP Last Login"
-
-# @ wp-last-login
-#. translators: plugin header field 'Description'
-#: wp-last-login.php:0
-msgid "Displays the date of the last login in user lists."
-msgstr "Viser datoen for seneste login i listen af brugere."
-
-# @ wp-last-login
-#. translators: plugin header field 'Author'
-#: wp-last-login.php:0
-msgid "Konstantin Obenland"
-msgstr "Konstantin Obenland"
-
-# @ wp-last-login
-#: wp-last-login.php:120
+#: wp-last-login.php:309
 msgid "Last Login"
 msgstr "Seneste login"
 
 # @ wp-last-login
-#: wp-last-login.php:148
+#: wp-last-login.php:310
+msgid "Last IP"
+msgstr "Sidste IP"
+
+# @ wp-last-login
+#: wp-last-login.php:355 wp-last-login.php:379
 msgid "Never."
 msgstr "Aldrig."
-
-# @ wp-last-login
-#. translators: plugin header field 'Version'
-#: wp-last-login.php:0
-msgid "1.1.0"
-msgstr "1.1.0"
-
-# @ wp-last-login
-#. translators: plugin header field 'PluginURI'
-#: wp-last-login.php:0
-msgid ""
-"http://en.wp.obenland.it/wp-last-login/?"
-"utm_source=wordpress&utm_medium=plugin&utm_campaign=wp-last-login"
-msgstr ""
-"http://en.wp.obenland.it/wp-last-login/?"
-"utm_source=wordpress&utm_medium=plugin&utm_campaign=wp-last-login"
-
-# @ wp-last-login
-#. translators: plugin header field 'AuthorURI'
-#: wp-last-login.php:0
-msgid ""
-"http://en.wp.obenland.it/?"
-"utm_source=wordpress&utm_medium=plugin&utm_campaign=wp-last-login"
-msgstr ""
-"http://en.wp.obenland.it/?"
-"utm_source=wordpress&utm_medium=plugin&utm_campaign=wp-last-login"

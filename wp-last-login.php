@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WordPress Last Login
  * Description: Displays the date of the last login and IP in user lists (admins only).
- * Version:     1.3.0
+ * Version:     1.3.1
  * Author:      Gnostis
  * License:     GPL-2.0-or-later
  * Text Domain: wp-last-login
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPLL_VERSION', '1.3.0' );
+define( 'WPLL_VERSION', '1.3.1' );
 define( 'WPLL_PLUGIN_FILE', __FILE__ );
 define( 'WPLL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
