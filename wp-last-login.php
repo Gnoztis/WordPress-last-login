@@ -315,7 +315,9 @@ final class WPLL_Last_Login {
 	 * Column width.
 	 */
 	public static function column_style() {
-		echo '<style>.column-wp-last-login{width:14%}.column-wp-last-ip{width:14%}</style>';
+		echo '<style>.column-wp-last-login{width:14%}.column-wp-last-ip{width:14%}'
+			. '.column-wp-last-ip a{display:inline-flex;align-items:center;min-height:24px;padding:2px 0}'
+			. '</style>';
 	}
 
 	/**
