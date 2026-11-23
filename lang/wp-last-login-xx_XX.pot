@@ -2,16 +2,16 @@
 # This file is distributed under the same license as the WordPress Last Login
 # package (GPL-2.0-or-later).
 #
-# Template of the wp-last-login text domain. Interface strings are English and
-# translated through the catalogues in this directory; strings that only appear
-# on the update screen are Russian, because the plugin is administered in
-# Russian (see _board/plugins.md, "Единые требования", п. 5).
+# GENERATED FILE — do not edit by hand.
+# Built from the plugin sources: every entry below is used by the code, or is
+# a plugin header field that WordPress translates. Regenerate after changing a
+# translatable string.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: WordPress Last Login 1.3.1\n"
+"Project-Id-Version: WordPress Last Login 1.3.7\n"
 "Report-Msgid-Bugs-To: https://github.com/Gnoztis/WordPress-last-login/issues\n"
-"POT-Creation-Date: 2026-11-23T00:00:00+00:00\n"
+"POT-Creation-Date: 2026-11-23T15:34:31+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -36,21 +36,104 @@ msgstr ""
 msgid "Last IP"
 msgstr ""
 
-#: wp-last-login.php:355 wp-last-login.php:379
+#: wp-last-login.php:357 wp-last-login.php:381
 msgid "Never."
 msgstr ""
 
-#. translators: plugin details modal on the update screen
-#: includes/class-wpll-github-updater.php:278
-msgid "Показывает дату и IP последнего входа каждого пользователя в списке пользователей (только для администраторов)."
+#: includes/class-wpll-github-updater.php:366
+msgid "Показывает дату последнего входа и IP в списках пользователей (только для админов)."
 msgstr ""
 
-#. translators: plugin details modal, no changelog in the release
-#: includes/class-wpll-github-updater.php:279
+#: includes/class-wpll-github-updater.php:367
 msgid "Описание изменений в релизе не заполнено."
 msgstr ""
 
-#. translators: link in the plugin row on plugins.php
-#: includes/class-wpll-github-updater.php:371
+#: includes/class-wpll-github-updater.php:421
+msgid "Архив обновления распакован в небезопасный путь — установка отменена."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:435
+msgid "Распакованный архив выходит за пределы каталога WordPress — установка отменена."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:444
+msgid "В архиве обновления нет главного файла плагина — установка отменена."
+msgstr ""
+
+#. translators: 1: version in the archive, 2: installed version
+#: includes/class-wpll-github-updater.php:459
+msgid "Архив содержит версию %1$s, а установлена %2$s: установка старых версий запрещена."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:484
+msgid "Каталог установки вне каталога плагинов — установка отменена."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:500
+msgid "Нет доступа к файловой системе — установка отменена, плагин не тронут."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:507
+msgid "Не удалось переименовать каталог обновления — установка отменена, установленный плагин не тронут."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:518
+msgid "После распаковки в каталоге нет главного файла — установка отменена, изменения отменены."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:766
 msgid "Проверить обновления"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:794
+msgid "WordPress Last Login: проверка обновлений не удалась."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1206
+msgid "лимит GitHub API"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1207
+msgid "репозиторий или тег не найдены"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1208
+msgid "токен отклонён"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1209
+msgid "нет связи с GitHub"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1210
+msgid "неожиданный ответ GitHub"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1211
+msgid "неизвестная ошибка"
+msgstr ""
+
+#. translators: 1: HTTP status or a dash, 2: failure reason
+#: includes/class-wpll-github-updater.php:1219
+msgid "проверка не удалась: %1$s (%2$s)"
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1233
+msgid "Задайте WPLL_GITHUB_TOKEN в wp-config.php: без токена GitHub разрешает 60 запросов в час на IP, с токеном — 5000."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1235
+msgid "Проверьте, что тег вида vX.Y.Z существует и репозиторий доступен текущему токену: приватный репозиторий без прав тоже отвечает 404."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1237
+msgid "Проверьте WPLL_GITHUB_TOKEN: токен должен иметь доступ на чтение этого репозитория."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1239
+msgid "Хостинг не смог открыть api.github.com: проверьте исходящие запросы и DNS."
+msgstr ""
+
+#: includes/class-wpll-github-updater.php:1241
+msgid "Повторите проверку позже; если ошибка повторяется, посмотрите ответ api.github.com."
 msgstr ""
